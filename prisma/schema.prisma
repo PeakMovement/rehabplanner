@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  name         String
+  passwordHash String
+  role         String         @default("clinician")
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  patients     Patient[]
+  prescriptions Prescription[]
+}
+
+model Patient {
+  id            String         @id @default(cuid())
+  firstName     String
+  lastName      String
+  email         String?
+  phone         String?
+  dateOfBirth   String?
+  diagnosis     String?
+  notes         String?
+  clinicianId   String
+  clinician     User           @relation(fields: [clinicianId], references: [id])
+  prescriptions Prescription[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Exercise {
+  id           String                  @id @default(cuid())
+  name         String
+  bodyRegion   String
+  category     String
+  difficulty   String                  @default("beginner")
+  equipment    String?
+  instructions String?
+  defaultSets  Int                     @default(3)
+  defaultReps  Int                     @default(10)
+  defaultHold  Int?
+  defaultRest  Int?
+  imageUrl     String?
+  notes        String?
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  prescriptionExercises PrescriptionExercise[]
+}
+
+model Prescription {
+  id          String                  @id @default(cuid())
+  name        String
+  notes       String?
+  status      String                  @default("active")
+  patientId   String
+  patient     Patient                 @relation(fields: [patientId], references: [id])
+  clinicianId String
+  clinician   User                    @relation(fields: [clinicianId], references: [id])
+  exercises   PrescriptionExercise[]
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+}
+
+model PrescriptionExercise {
+  id             String       @id @default(cuid())
+  prescriptionId String
+  prescription   Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  exerciseId     String
+  exercise       Exercise     @relation(fields: [exerciseId], references: [id])
+  sets           Int          @default(3)
+  reps           Int          @default(10)
+  hold           Int?
+  rest           Int?
+  frequency      String?
+  notes          String?
+  orderIndex     Int          @default(0)
+}
