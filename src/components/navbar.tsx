@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   Users,
-  Dumbbell,
   ClipboardList,
   Shield,
   LogOut,
@@ -19,7 +18,6 @@ import { useState } from "react";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/patients", label: "Patients", icon: Users },
-  { href: "/exercises", label: "Exercises", icon: Dumbbell },
   { href: "/prescriptions", label: "Prescriptions", icon: ClipboardList },
 ];
 

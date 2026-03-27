@@ -1,12 +1,12 @@
 import { requireAdmin } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
-import { Users, Dumbbell, ClipboardList } from "lucide-react";
+import { Users, ClipboardList } from "lucide-react";
 import Link from "next/link";
 
 export default async function AdminPage() {
   const session = await requireAdmin();
 
-  const [users, totalUsers, totalExercises, totalPrescriptions] =
+  const [users, totalUsers, totalPrescriptions] =
     await Promise.all([
       prisma.user.findMany({
         orderBy: { createdAt: "desc" },
@@ -20,13 +20,11 @@ export default async function AdminPage() {
         },
       }),
       prisma.user.count(),
-      prisma.exercise.count(),
       prisma.prescription.count(),
     ]);
 
   const systemStats = [
     { label: "Total Users", value: totalUsers, icon: Users },
-    { label: "Total Exercises", value: totalExercises, icon: Dumbbell },
     {
       label: "Total Prescriptions",
       value: totalPrescriptions,
@@ -43,20 +41,13 @@ export default async function AdminPage() {
               Admin Dashboard
             </h1>
             <p className="text-gray-600 mt-1">
-              Manage users, exercises, and system settings
+              Manage users and system settings
             </p>
           </div>
-          <Link
-            href="/exercises"
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-          >
-            <Dumbbell className="h-4 w-4 mr-2" />
-            Manage Exercises
-          </Link>
         </div>
 
         {/* System Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
           {systemStats.map((stat) => {
             const Icon = stat.icon;
             return (
