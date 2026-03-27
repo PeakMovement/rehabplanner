@@ -1,7 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { Search, X, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useRef } from "react";
+import {
+  Search,
+  X,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  Save,
+  Check,
+  Dumbbell,
+} from "lucide-react";
+import {
+  generateProtocol,
+  type GeneratedProtocol,
+  type Treatment,
+} from "@/lib/protocol-engine";
 
 const CONDITIONS = [
   "Rotator Cuff Tear",
@@ -111,6 +125,19 @@ const ACUITY_OPTIONS = [
   { value: "flare-up", label: "Flare-Up", desc: "Recurrence of symptoms" },
 ];
 
+const MODALITY_COLORS: Record<string, string> = {
+  "Cryotherapy / Icing": "bg-cyan-50 border-cyan-200 text-cyan-800",
+  "Heat Therapy": "bg-orange-50 border-orange-200 text-orange-800",
+  "Deep Tissue Massage / Manual Therapy": "bg-purple-50 border-purple-200 text-purple-800",
+  "Dry Needling": "bg-red-50 border-red-200 text-red-800",
+  "Shockwave Therapy (ESWT)": "bg-yellow-50 border-yellow-200 text-yellow-800",
+  "Laser Therapy (LLLT / Photobiomodulation)": "bg-green-50 border-green-200 text-green-800",
+  "TENS (Transcutaneous Electrical Nerve Stimulation)": "bg-indigo-50 border-indigo-200 text-indigo-800",
+  "Therapeutic Ultrasound": "bg-blue-50 border-blue-200 text-blue-800",
+  "Taping / Bracing": "bg-gray-50 border-gray-300 text-gray-800",
+  "Rehabilitation Exercises": "bg-emerald-50 border-emerald-200 text-emerald-800",
+};
+
 export default function HippocratesPage() {
   const [conditionSearch, setConditionSearch] = useState("");
   const [selectedCondition, setSelectedCondition] = useState("");
@@ -123,7 +150,13 @@ export default function HippocratesPage() {
   const [symptomSearch, setSymptomSearch] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
 
-  // Sections collapsible state
+  const [protocol, setProtocol] = useState<GeneratedProtocol | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [expandedTreatments, setExpandedTreatments] = useState<Set<number>>(new Set());
+
+  const protocolRef = useRef<HTMLDivElement>(null);
+
   const [sectionsOpen, setSectionsOpen] = useState({
     condition: true,
     details: true,
@@ -142,6 +175,15 @@ export default function HippocratesPage() {
     );
   }
 
+  function toggleTreatmentExpand(index: number) {
+    setExpandedTreatments((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  }
+
   function clearAll() {
     setSelectedCondition("");
     setConditionSearch("");
@@ -151,6 +193,58 @@ export default function HippocratesPage() {
     setSelectedSymptoms([]);
     setSymptomSearch("");
     setAdditionalNotes("");
+    setProtocol(null);
+    setSaved(false);
+    setExpandedTreatments(new Set());
+  }
+
+  function handleGenerate() {
+    const result = generateProtocol({
+      condition: selectedCondition || undefined,
+      moi: moi || undefined,
+      duration: duration || undefined,
+      acuity: acuity || undefined,
+      symptoms: selectedSymptoms.length > 0 ? selectedSymptoms : undefined,
+      notes: additionalNotes || undefined,
+    });
+    setProtocol(result);
+    setSaved(false);
+    // Expand all treatments by default
+    setExpandedTreatments(new Set(result.treatments.map((_, i) => i)));
+    // Scroll to protocol
+    setTimeout(() => {
+      protocolRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  }
+
+  async function handleSave() {
+    if (!protocol) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/protocols", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: protocol.name,
+          condition: selectedCondition || null,
+          moi: moi || null,
+          duration: duration || null,
+          acuity: acuity || null,
+          symptoms: selectedSymptoms,
+          notes: additionalNotes || null,
+          treatments: protocol.treatments,
+        }),
+      });
+      if (res.ok) {
+        setSaved(true);
+      } else {
+        alert("Failed to save protocol");
+      }
+    } catch {
+      alert("Failed to save protocol");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const filteredConditions = CONDITIONS.filter((c) =>
@@ -170,7 +264,7 @@ export default function HippocratesPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Hippocrates</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Clinical assessment and condition profiling
+            Clinical assessment and treatment protocol generator
           </p>
         </div>
         {hasAnyInput && (
@@ -409,7 +503,6 @@ export default function HippocratesPage() {
         </button>
         {sectionsOpen.symptoms && (
           <div className="px-6 pb-6">
-            {/* Selected symptoms pills */}
             {selectedSymptoms.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-4">
                 {selectedSymptoms.map((symptom) => (
@@ -429,7 +522,6 @@ export default function HippocratesPage() {
               </div>
             )}
 
-            {/* Search symptoms */}
             <div className="relative mb-3">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
@@ -441,7 +533,6 @@ export default function HippocratesPage() {
               />
             </div>
 
-            {/* Symptom checkboxes */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-64 overflow-y-auto">
               {filteredSymptoms.map((symptom) => {
                 const isSelected = selectedSymptoms.includes(symptom);
@@ -487,63 +578,181 @@ export default function HippocratesPage() {
         )}
       </div>
 
-      {/* Summary */}
+      {/* Generate Protocol Button */}
       {hasAnyInput && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
-            Summary
-          </h3>
-          <div className="space-y-2 text-sm">
-            {selectedCondition && (
-              <div className="flex gap-2">
-                <span className="font-medium text-gray-500 w-28 flex-shrink-0">
-                  Condition:
-                </span>
-                <span className="text-gray-900">{selectedCondition}</span>
-              </div>
-            )}
-            {moi && (
-              <div className="flex gap-2">
-                <span className="font-medium text-gray-500 w-28 flex-shrink-0">
-                  MOI:
-                </span>
-                <span className="text-gray-900">{moi}</span>
-              </div>
-            )}
-            {duration && (
-              <div className="flex gap-2">
-                <span className="font-medium text-gray-500 w-28 flex-shrink-0">
-                  Duration:
-                </span>
-                <span className="text-gray-900">{duration}</span>
-              </div>
-            )}
-            {acuity && (
-              <div className="flex gap-2">
-                <span className="font-medium text-gray-500 w-28 flex-shrink-0">
-                  Acuity:
-                </span>
-                <span className="text-gray-900 capitalize">{acuity}</span>
-              </div>
-            )}
-            {selectedSymptoms.length > 0 && (
-              <div className="flex gap-2">
-                <span className="font-medium text-gray-500 w-28 flex-shrink-0">
-                  Symptoms:
-                </span>
-                <span className="text-gray-900">
-                  {selectedSymptoms.join(", ")}
-                </span>
-              </div>
-            )}
-            {additionalNotes && (
-              <div className="flex gap-2">
-                <span className="font-medium text-gray-500 w-28 flex-shrink-0">
-                  Notes:
-                </span>
-                <span className="text-gray-900">{additionalNotes}</span>
-              </div>
-            )}
+        <div className="flex justify-center mb-8">
+          <button
+            onClick={handleGenerate}
+            className="flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            <Sparkles className="w-5 h-5" />
+            Generate Treatment Protocol
+          </button>
+        </div>
+      )}
+
+      {/* Generated Protocol */}
+      {protocol && (
+        <div ref={protocolRef}>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                {protocol.name}
+              </h2>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {protocol.treatments.length} treatment modalities recommended
+              </p>
+            </div>
+            <button
+              onClick={handleSave}
+              disabled={saving || saved}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                saved
+                  ? "bg-green-50 text-green-700 border border-green-200"
+                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              {saved ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  Saved
+                </>
+              ) : saving ? (
+                "Saving..."
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Save Protocol
+                </>
+              )}
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {protocol.treatments.map((treatment: Treatment, index: number) => {
+              const isExpanded = expandedTreatments.has(index);
+              const colorClass =
+                MODALITY_COLORS[treatment.modality] ||
+                "bg-gray-50 border-gray-200 text-gray-800";
+              const isRehab = treatment.modality === "Rehabilitation Exercises";
+
+              return (
+                <div
+                  key={index}
+                  className={`rounded-lg border ${colorClass}`}
+                >
+                  <button
+                    onClick={() => toggleTreatmentExpand(index)}
+                    className="w-full flex items-center justify-between px-5 py-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      {isRehab && <Dumbbell className="w-5 h-5 flex-shrink-0" />}
+                      <div className="text-left">
+                        <h3 className="font-semibold text-sm">
+                          {treatment.modality}
+                        </h3>
+                        {!isExpanded && (
+                          <p className="text-xs opacity-75 mt-0.5">
+                            {treatment.frequency} &middot; {treatment.duration}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {isExpanded ? (
+                      <ChevronUp className="w-4 h-4 opacity-50" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 opacity-50" />
+                    )}
+                  </button>
+
+                  {isExpanded && (
+                    <div className="px-5 pb-5 space-y-3">
+                      <p className="text-sm opacity-90">
+                        {treatment.description}
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white/60 rounded-md px-3 py-2">
+                          <p className="text-xs font-medium opacity-60 uppercase tracking-wider">
+                            Frequency
+                          </p>
+                          <p className="text-sm font-medium mt-0.5">
+                            {treatment.frequency}
+                          </p>
+                        </div>
+                        <div className="bg-white/60 rounded-md px-3 py-2">
+                          <p className="text-xs font-medium opacity-60 uppercase tracking-wider">
+                            Duration
+                          </p>
+                          <p className="text-sm font-medium mt-0.5">
+                            {treatment.duration}
+                          </p>
+                        </div>
+                      </div>
+
+                      {treatment.notes && (
+                        <div className="bg-white/60 rounded-md px-3 py-2">
+                          <p className="text-xs font-medium opacity-60 uppercase tracking-wider">
+                            Clinical Notes
+                          </p>
+                          <p className="text-sm mt-0.5">{treatment.notes}</p>
+                        </div>
+                      )}
+
+                      {/* Rehab Exercises Table */}
+                      {isRehab && treatment.exercises && treatment.exercises.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-xs font-semibold uppercase tracking-wider opacity-60 mb-2">
+                            Prescribed Exercises
+                          </p>
+                          <div className="bg-white rounded-lg border border-emerald-200 overflow-hidden">
+                            <table className="w-full">
+                              <thead>
+                                <tr className="bg-emerald-50/50 border-b border-emerald-100">
+                                  <th className="text-left px-3 py-2 text-xs font-semibold text-emerald-700">
+                                    Exercise
+                                  </th>
+                                  <th className="text-center px-3 py-2 text-xs font-semibold text-emerald-700 w-20">
+                                    Sets
+                                  </th>
+                                  <th className="text-center px-3 py-2 text-xs font-semibold text-emerald-700 w-28">
+                                    Reps
+                                  </th>
+                                  <th className="text-left px-3 py-2 text-xs font-semibold text-emerald-700 hidden sm:table-cell">
+                                    Notes
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-emerald-50">
+                                {treatment.exercises.map((ex, exIdx) => (
+                                  <tr
+                                    key={exIdx}
+                                    className="hover:bg-emerald-50/30"
+                                  >
+                                    <td className="px-3 py-2.5 text-sm font-medium text-gray-900">
+                                      {ex.name}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-sm text-center text-gray-700">
+                                      {ex.sets}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-sm text-center text-gray-700">
+                                      {ex.reps}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-xs text-gray-500 hidden sm:table-cell">
+                                      {ex.notes || "—"}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
