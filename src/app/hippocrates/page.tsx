@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useSession } from "next-auth/react";
 import {
   Search,
   X,
@@ -15,6 +16,7 @@ import {
   generateProtocol,
   type GeneratedProtocol,
   type Treatment,
+  type Profession,
 } from "@/lib/protocol-engine";
 
 const CONDITIONS = [
@@ -131,14 +133,19 @@ const MODALITY_COLORS: Record<string, string> = {
   "Deep Tissue Massage / Manual Therapy": "bg-purple-50 border-purple-200 text-purple-800",
   "Dry Needling": "bg-red-50 border-red-200 text-red-800",
   "Shockwave Therapy (ESWT)": "bg-yellow-50 border-yellow-200 text-yellow-800",
-  "Laser Therapy (LLLT / Photobiomodulation)": "bg-green-50 border-green-200 text-green-800",
+  "Bioflex Laser Therapy": "bg-green-50 border-green-200 text-green-800",
   "TENS (Transcutaneous Electrical Nerve Stimulation)": "bg-indigo-50 border-indigo-200 text-indigo-800",
   "Therapeutic Ultrasound": "bg-blue-50 border-blue-200 text-blue-800",
   "Taping / Bracing": "bg-gray-50 border-gray-300 text-gray-800",
+  "Stretching Program": "bg-lime-50 border-lime-200 text-lime-800",
   "Rehabilitation Exercises": "bg-emerald-50 border-emerald-200 text-emerald-800",
 };
 
 export default function HippocratesPage() {
+  const { data: session } = useSession();
+  const profession = (session?.user?.profession || "physiotherapist") as Profession;
+  const isBio = profession === "biokineticist";
+
   const [conditionSearch, setConditionSearch] = useState("");
   const [selectedCondition, setSelectedCondition] = useState("");
   const [conditionDropdownOpen, setConditionDropdownOpen] = useState(false);
@@ -206,6 +213,7 @@ export default function HippocratesPage() {
       acuity: acuity || undefined,
       symptoms: selectedSymptoms.length > 0 ? selectedSymptoms : undefined,
       notes: additionalNotes || undefined,
+      profession,
     });
     setProtocol(result);
     setSaved(false);
@@ -262,9 +270,22 @@ export default function HippocratesPage() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Hippocrates</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-gray-900">Hippocrates</h1>
+            <span
+              className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                isBio
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-blue-100 text-blue-700"
+              }`}
+            >
+              {isBio ? "Biokinetics" : "Physiotherapy"}
+            </span>
+          </div>
           <p className="text-sm text-gray-500 mt-1">
-            Clinical assessment and treatment protocol generator
+            {isBio
+              ? "Exercise-based rehabilitation protocol generator"
+              : "Clinical assessment and treatment protocol generator"}
           </p>
         </div>
         {hasAnyInput && (

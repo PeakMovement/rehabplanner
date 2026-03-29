@@ -9,6 +9,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [profession, setProfession] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -34,7 +35,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, profession }),
       });
 
       const data = await res.json();
@@ -112,6 +113,38 @@ export default function RegisterPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="you@example.com"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              I am a...
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setProfession("physiotherapist")}
+                className={`flex flex-col items-center gap-1 px-4 py-3 rounded-lg border-2 transition-colors ${
+                  profession === "physiotherapist"
+                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                    : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <span className="text-sm font-semibold">Physiotherapist</span>
+                <span className="text-xs opacity-70">Full scope of practice</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setProfession("biokineticist")}
+                className={`flex flex-col items-center gap-1 px-4 py-3 rounded-lg border-2 transition-colors ${
+                  profession === "biokineticist"
+                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                    : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <span className="text-sm font-semibold">Biokineticist</span>
+                <span className="text-xs opacity-70">Exercise-based rehab</span>
+              </button>
+            </div>
           </div>
 
           <div>

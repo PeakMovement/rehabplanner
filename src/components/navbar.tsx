@@ -80,7 +80,7 @@ export function Navbar() {
             <span className="text-sm text-gray-600">
               {session.user.name}
               <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 capitalize">
-                {session.user.role}
+                {session.user.profession === "biokineticist" ? "Bio" : "Physio"}
               </span>
             </span>
             <button

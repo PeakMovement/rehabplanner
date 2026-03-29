@@ -13,6 +13,7 @@ model User {
   name         String
   passwordHash String
   role         String              @default("clinician")
+  profession   String              @default("physiotherapist")
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
   patients     Patient[]

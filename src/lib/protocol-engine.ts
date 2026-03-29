@@ -1,3 +1,5 @@
+export type Profession = "physiotherapist" | "biokineticist";
+
 export interface ProtocolInput {
   condition?: string;
   moi?: string;
@@ -5,6 +7,7 @@ export interface ProtocolInput {
   acuity?: string;
   symptoms?: string[];
   notes?: string;
+  profession?: Profession;
 }
 
 export interface Treatment {
@@ -187,6 +190,8 @@ export function generateProtocol(input: ProtocolInput): GeneratedProtocol {
   const isChronic = input.acuity === "chronic";
   const isSubacute = input.acuity === "subacute";
   const symptoms = input.symptoms || [];
+  const isBio = input.profession === "biokineticist";
+  const isPhysio = !isBio;
 
   const hasSwelling = symptoms.some((s) => s.toLowerCase().includes("swelling"));
   const hasPain = symptoms.some((s) => s.toLowerCase().includes("pain"));
@@ -195,141 +200,182 @@ export function generateProtocol(input: ProtocolInput): GeneratedProtocol {
   const hasNumbness = symptoms.some((s) => s.toLowerCase().includes("numbness") || s.toLowerCase().includes("tingling"));
   const hasMuscleSpasm = symptoms.some((s) => s.toLowerCase().includes("spasm"));
 
-  // 1. Cryotherapy / Icing - acute, swelling, post-op, pain
-  if (isAcute || hasSwelling || input.acuity === "post-op") {
-    treatments.push({
-      modality: "Cryotherapy / Icing",
-      description: "Apply ice pack wrapped in towel to affected area to reduce inflammation and provide pain relief.",
-      frequency: isAcute ? "Every 2-3 hours" : "2-3x daily",
-      duration: "15-20 minutes per session",
-      notes: hasSwelling
-        ? "Elevate the area during icing. Combine with compression if appropriate."
-        : "Protect skin with towel barrier. Monitor for adverse reactions.",
-    });
+  // === PHYSIO-ONLY MODALITIES ===
+  // Biokineticists skip straight to rehab exercises below
+
+  if (isPhysio) {
+    // 1. Cryotherapy / Icing - acute, swelling, post-op, pain
+    if (isAcute || hasSwelling || input.acuity === "post-op") {
+      treatments.push({
+        modality: "Cryotherapy / Icing",
+        description: "Apply ice pack wrapped in towel to affected area to reduce inflammation and provide pain relief.",
+        frequency: isAcute ? "Every 2-3 hours" : "2-3x daily",
+        duration: "15-20 minutes per session",
+        notes: hasSwelling
+          ? "Elevate the area during icing. Combine with compression if appropriate."
+          : "Protect skin with towel barrier. Monitor for adverse reactions.",
+      });
+    }
+
+    // 2. Heat Therapy - chronic, stiffness, muscle spasm
+    if ((isChronic || isSubacute || hasStiffness || hasMuscleSpasm) && !isAcute && !hasSwelling) {
+      treatments.push({
+        modality: "Heat Therapy",
+        description: "Apply moist heat to affected area to increase blood flow, relax muscles, and improve tissue extensibility.",
+        frequency: "Before treatment sessions or 2-3x daily",
+        duration: "15-20 minutes",
+        notes: hasMuscleSpasm
+          ? "Focus on muscle belly. Follow with gentle stretching."
+          : "Use prior to manual therapy or exercise for best results.",
+      });
+    }
+
+    // 3. Manual Therapy / Deep Tissue
+    if (hasStiffness || hasRomLoss || hasMuscleSpasm || hasPain) {
+      treatments.push({
+        modality: "Deep Tissue Massage / Manual Therapy",
+        description: isAcute
+          ? "Gentle soft tissue mobilization around the affected area. Avoid aggressive deep pressure on acute tissues."
+          : "Deep tissue massage and myofascial release to address muscle tension, trigger points, and soft tissue restrictions.",
+        frequency: "2-3x per week",
+        duration: "15-20 minutes per session",
+        notes: isAcute
+          ? "Grade I-II mobilizations only. Progress as tolerated."
+          : hasMuscleSpasm
+          ? "Focus on trigger points and tight bands. Combine with heat pre-treatment."
+          : "Progress pressure based on patient tolerance.",
+      });
+    }
+
+    // 4. Dry Needling - chronic pain, trigger points, muscle spasm, stiffness
+    if ((isChronic || isSubacute || hasMuscleSpasm) && !isAcute && region !== "head") {
+      treatments.push({
+        modality: "Dry Needling",
+        description: "Intramuscular stimulation targeting myofascial trigger points to reduce pain, release tension, and restore muscle function.",
+        frequency: "1-2x per week",
+        duration: "10-15 minutes",
+        notes: "Patient may experience post-needling soreness for 24-48 hours. Apply heat after session if needed.",
+      });
+    }
+
+    // 5. Shockwave Therapy - tendinopathies, chronic conditions, calcification
+    if (isChronic || input.condition?.toLowerCase().includes("tendinop") || input.condition?.toLowerCase().includes("plantar") || input.condition?.toLowerCase().includes("epicondyl")) {
+      treatments.push({
+        modality: "Shockwave Therapy (ESWT)",
+        description: "Extracorporeal shockwave therapy to stimulate healing response, increase blood flow, and break down calcification or scar tissue.",
+        frequency: "1x per week",
+        duration: "3-5 minutes per treatment zone, 4-6 sessions total",
+        notes: "Avoid NSAIDs 48 hours before/after. Patient may feel temporary increase in soreness.",
+      });
+    }
+
+    // 6. Bioflex Laser Therapy - pain, inflammation, tissue healing
+    if (hasPain || hasSwelling || isAcute || input.acuity === "post-op") {
+      treatments.push({
+        modality: "Bioflex Laser Therapy",
+        description: "Bioflex low-level laser therapy (LLLT) combining superluminous and laser diodes to accelerate tissue healing, reduce inflammation, and provide deep analgesic effects.",
+        frequency: "2-3x per week",
+        duration: "20-30 minutes per treatment area (multi-phase protocol)",
+        notes: isAcute
+          ? "Safe to use in acute phase. Begin with lower power settings and progress. Focus on anti-inflammatory protocol."
+          : "Full Bioflex protocol: superluminous array followed by laser probe to target deeper structures. Can combine with other modalities.",
+      });
+    }
+
+    // 7. TENS - pain management
+    if (hasPain && !hasNumbness) {
+      treatments.push({
+        modality: "TENS (Transcutaneous Electrical Nerve Stimulation)",
+        description: "Electrical stimulation for pain modulation via the gate control mechanism.",
+        frequency: "As needed, up to 3x daily",
+        duration: "20-30 minutes per session",
+        notes: "Patient can use portable unit at home. Adjust intensity to comfortable tingling sensation.",
+      });
+    }
+
+    // 8. Therapeutic Ultrasound - deep tissue heating, chronic
+    if ((isChronic || isSubacute) && hasStiffness && region !== "head") {
+      treatments.push({
+        modality: "Therapeutic Ultrasound",
+        description: "Deep tissue heating to improve tissue extensibility, increase blood flow, and promote healing.",
+        frequency: "2-3x per week",
+        duration: "5-8 minutes per area",
+        notes: "Use continuous mode for thermal effects, pulsed mode for non-thermal healing effects.",
+      });
+    }
+
+    // 9. Taping - instability, acute support
+    if (symptoms.some((s) => s.toLowerCase().includes("instability")) || isAcute) {
+      treatments.push({
+        modality: "Taping / Bracing",
+        description: "Kinesiology taping or rigid taping to provide support, proprioceptive feedback, and reduce load on affected structures.",
+        frequency: "As needed, reapply every 3-5 days",
+        duration: "Continuous wear during activities",
+        notes: "Educate patient on skin care and signs of irritation. Progress to weaning as stability improves.",
+      });
+    }
+
+    // 10. Stretching Program - physio
+    if (hasStiffness || hasRomLoss) {
+      treatments.push({
+        modality: "Stretching Program",
+        description: "Targeted static and dynamic stretching protocol to restore flexibility and range of motion.",
+        frequency: "Daily, 2x per day if tolerated",
+        duration: "10-15 minutes per session",
+        notes: isAcute
+          ? "Gentle static holds only. Stay within pain-free range."
+          : "Progress from static to dynamic stretching. Include PNF stretching where appropriate.",
+      });
+    }
   }
 
-  // 2. Heat Therapy - chronic, stiffness, muscle spasm
-  if ((isChronic || isSubacute || hasStiffness || hasMuscleSpasm) && !isAcute && !hasSwelling) {
-    treatments.push({
-      modality: "Heat Therapy",
-      description: "Apply moist heat to affected area to increase blood flow, relax muscles, and improve tissue extensibility.",
-      frequency: "Before treatment sessions or 2-3x daily",
-      duration: "15-20 minutes",
-      notes: hasMuscleSpasm
-        ? "Focus on muscle belly. Follow with gentle stretching."
-        : "Use prior to manual therapy or exercise for best results.",
-    });
-  }
-
-  // 3. Manual Therapy / Deep Tissue
-  if (hasStiffness || hasRomLoss || hasMuscleSpasm || hasPain) {
-    treatments.push({
-      modality: "Deep Tissue Massage / Manual Therapy",
-      description: isAcute
-        ? "Gentle soft tissue mobilization around the affected area. Avoid aggressive deep pressure on acute tissues."
-        : "Deep tissue massage and myofascial release to address muscle tension, trigger points, and soft tissue restrictions.",
-      frequency: "2-3x per week",
-      duration: "15-20 minutes per session",
-      notes: isAcute
-        ? "Grade I-II mobilizations only. Progress as tolerated."
-        : hasMuscleSpasm
-        ? "Focus on trigger points and tight bands. Combine with heat pre-treatment."
-        : "Progress pressure based on patient tolerance.",
-    });
-  }
-
-  // 4. Dry Needling - chronic pain, trigger points, muscle spasm, stiffness
-  if ((isChronic || isSubacute || hasMuscleSpasm) && !isAcute && region !== "head") {
-    treatments.push({
-      modality: "Dry Needling",
-      description: "Intramuscular stimulation targeting myofascial trigger points to reduce pain, release tension, and restore muscle function.",
-      frequency: "1-2x per week",
-      duration: "10-15 minutes",
-      notes: "Patient may experience post-needling soreness for 24-48 hours. Apply heat after session if needed.",
-    });
-  }
-
-  // 5. Shockwave Therapy - tendinopathies, chronic conditions, calcification
-  if (isChronic || input.condition?.toLowerCase().includes("tendinop") || input.condition?.toLowerCase().includes("plantar") || input.condition?.toLowerCase().includes("epicondyl")) {
-    treatments.push({
-      modality: "Shockwave Therapy (ESWT)",
-      description: "Extracorporeal shockwave therapy to stimulate healing response, increase blood flow, and break down calcification or scar tissue.",
-      frequency: "1x per week",
-      duration: "3-5 minutes per treatment zone, 4-6 sessions total",
-      notes: "Avoid NSAIDs 48 hours before/after. Patient may feel temporary increase in soreness.",
-    });
-  }
-
-  // 6. Laser Therapy (LLLT) - pain, inflammation, tissue healing
-  if (hasPain || hasSwelling || isAcute || input.acuity === "post-op") {
-    treatments.push({
-      modality: "Laser Therapy (LLLT / Photobiomodulation)",
-      description: "Low-level laser therapy to accelerate tissue healing, reduce inflammation, and provide analgesic effects at the cellular level.",
-      frequency: "2-3x per week",
-      duration: "5-10 minutes per treatment area",
-      notes: isAcute
-        ? "Safe to use in acute phase. Focus on reducing inflammation and pain."
-        : "Can be combined with other modalities in the same session.",
-    });
-  }
-
-  // 7. TENS - pain management
-  if (hasPain && !hasNumbness) {
-    treatments.push({
-      modality: "TENS (Transcutaneous Electrical Nerve Stimulation)",
-      description: "Electrical stimulation for pain modulation via the gate control mechanism.",
-      frequency: "As needed, up to 3x daily",
-      duration: "20-30 minutes per session",
-      notes: "Patient can use portable unit at home. Adjust intensity to comfortable tingling sensation.",
-    });
-  }
-
-  // 8. Ultrasound - deep tissue heating, chronic
-  if ((isChronic || isSubacute) && hasStiffness && region !== "head") {
-    treatments.push({
-      modality: "Therapeutic Ultrasound",
-      description: "Deep tissue heating to improve tissue extensibility, increase blood flow, and promote healing.",
-      frequency: "2-3x per week",
-      duration: "5-8 minutes per area",
-      notes: "Use continuous mode for thermal effects, pulsed mode for non-thermal healing effects.",
-    });
-  }
-
-  // 9. Taping - instability, acute support
-  if (symptoms.some((s) => s.toLowerCase().includes("instability")) || isAcute) {
-    treatments.push({
-      modality: "Taping / Bracing",
-      description: "Kinesiology taping or rigid taping to provide support, proprioceptive feedback, and reduce load on affected structures.",
-      frequency: "As needed, reapply every 3-5 days",
-      duration: "Continuous wear during activities",
-      notes: "Educate patient on skin care and signs of irritation. Progress to weaning as stability improves.",
-    });
-  }
-
-  // 10. Rehab Exercises - always include
+  // === REHAB EXERCISES — both professions ===
   const exerciseList = region ? (REGION_EXERCISES[region] || []) : [];
 
   // Filter exercises based on acuity
   let selectedExercises = exerciseList;
   if (isAcute) {
-    // In acute phase, pick gentler exercises (first 4-5)
     selectedExercises = exerciseList.slice(0, Math.min(5, exerciseList.length));
   } else if (isChronic && exerciseList.length > 4) {
-    // In chronic phase, include more progressive exercises
     selectedExercises = exerciseList;
+  }
+
+  // Bio: add stretching as a separate modality since they focus on exercise-based rehab
+  if (isBio && (hasStiffness || hasRomLoss || selectedExercises.length > 0)) {
+    treatments.push({
+      modality: "Stretching Program",
+      description: "Targeted static and dynamic stretching protocol to restore flexibility, improve range of motion, and prepare for exercise.",
+      frequency: "Daily, incorporated into warm-up and cool-down",
+      duration: "10-15 minutes per session",
+      notes: isAcute
+        ? "Gentle static holds only (20-30 seconds). Stay within pain-free range."
+        : "Progress from static to dynamic stretching. Incorporate PNF techniques where appropriate.",
+    });
   }
 
   if (selectedExercises.length > 0) {
     treatments.push({
       modality: "Rehabilitation Exercises",
-      description: isAcute
+      description: isBio
+        ? isAcute
+          ? "Gentle, progressive exercise program focused on restoring functional movement patterns within pain-free range."
+          : isChronic
+          ? "Comprehensive exercise-based rehabilitation program targeting strength, endurance, functional capacity, and return to activity."
+          : "Targeted exercise rehabilitation program to restore strength, mobility, and functional capacity."
+        : isAcute
         ? "Gentle, pain-free exercises focused on maintaining range of motion and preventing deconditioning."
         : isChronic
         ? "Progressive strengthening and functional exercises to restore full capacity and prevent recurrence."
         : "Targeted exercises to restore strength, mobility, and function.",
-      frequency: isAcute ? "1-2x daily" : "Daily or as prescribed",
-      duration: "20-30 minutes per session",
-      notes: isAcute
+      frequency: isBio
+        ? isAcute ? "2-3x per week" : "3-5x per week"
+        : isAcute ? "1-2x daily" : "Daily or as prescribed",
+      duration: isBio ? "30-45 minutes per session" : "20-30 minutes per session",
+      notes: isBio
+        ? isAcute
+          ? "All exercises performed within pain-free range. Monitor load and volume carefully. Progress when symptoms allow."
+          : "Periodise training load. Track progression via sets/reps/resistance. Include functional movement screening."
+        : isAcute
         ? "All exercises should be performed within pain-free range. Stop if pain increases."
         : "Progress resistance and complexity as tolerated. Maintain proper form throughout.",
       exercises: selectedExercises,
@@ -337,9 +383,10 @@ export function generateProtocol(input: ProtocolInput): GeneratedProtocol {
   }
 
   // Build protocol name
-  let protocolName = "Treatment Protocol";
+  const professionLabel = isBio ? "Biokinetics" : "Physiotherapy";
+  let protocolName = `${professionLabel} Protocol`;
   if (input.condition) {
-    protocolName = `${input.condition} Protocol`;
+    protocolName = `${input.condition} — ${professionLabel} Protocol`;
     if (input.acuity) {
       const acuityLabel = input.acuity.charAt(0).toUpperCase() + input.acuity.slice(1);
       protocolName += ` (${acuityLabel})`;

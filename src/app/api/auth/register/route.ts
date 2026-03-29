@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
   try {
-    const { name, email, password } = await request.json();
+    const { name, email, password, profession } = await request.json();
 
     // Basic input validation
     if (!name || !email || !password) {
@@ -43,12 +43,18 @@ export async function POST(request: Request) {
     // Hash password and create user
     const hashedPassword = await hash(password, 12);
 
+    const validProfessions = ["physiotherapist", "biokineticist"];
+    const userProfession = validProfessions.includes(profession)
+      ? profession
+      : "physiotherapist";
+
     const user = await prisma.user.create({
       data: {
         name,
         email,
         passwordHash: hashedPassword,
         role: "clinician",
+        profession: userProfession,
       },
     });
 
