@@ -29,6 +29,12 @@ export interface RehabExercise {
 export interface GeneratedProtocol {
   name: string;
   treatments: Treatment[];
+  topSuggested: TopSuggested[];
+}
+
+export interface TopSuggested {
+  modality: string;
+  reason: string;
 }
 
 // Maps body region keywords in conditions to relevant treatments
@@ -393,5 +399,78 @@ export function generateProtocol(input: ProtocolInput): GeneratedProtocol {
     }
   }
 
-  return { name: protocolName, treatments };
+  // Determine top suggested treatments based on condition, acuity, and symptoms
+  const topSuggested: TopSuggested[] = [];
+
+  for (const t of treatments) {
+    const mod = t.modality;
+
+    // Rehab is always top for bio
+    if (isBio && mod === "Rehabilitation Exercises") {
+      topSuggested.push({
+        modality: mod,
+        reason: "Core of biokinetics treatment — exercise-based rehabilitation is your primary intervention.",
+      });
+    }
+
+    // Shockwave for tendinopathies
+    if (mod === "Shockwave Therapy (ESWT)" && (input.condition?.toLowerCase().includes("tendinop") || input.condition?.toLowerCase().includes("plantar") || input.condition?.toLowerCase().includes("epicondyl"))) {
+      topSuggested.push({
+        modality: mod,
+        reason: "Strong evidence for tendinopathies and chronic enthesopathies. Stimulates tissue remodelling.",
+      });
+    }
+
+    // Bioflex for acute/post-op
+    if (mod === "Bioflex Laser Therapy" && (isAcute || input.acuity === "post-op")) {
+      topSuggested.push({
+        modality: mod,
+        reason: "Excellent for acute inflammation and post-surgical recovery. Accelerates cellular healing with minimal risk.",
+      });
+    }
+
+    // Deep tissue for chronic pain/spasm
+    if (mod === "Deep Tissue Massage / Manual Therapy" && (hasMuscleSpasm || (isChronic && hasPain))) {
+      topSuggested.push({
+        modality: mod,
+        reason: "Directly addresses muscle tension and trigger points. High patient satisfaction for pain relief.",
+      });
+    }
+
+    // Dry needling for chronic trigger points
+    if (mod === "Dry Needling" && hasMuscleSpasm) {
+      topSuggested.push({
+        modality: mod,
+        reason: "Targets myofascial trigger points directly. Fast-acting for muscle spasm and referred pain patterns.",
+      });
+    }
+
+    // Cryotherapy for acute swelling
+    if (mod === "Cryotherapy / Icing" && isAcute && hasSwelling) {
+      topSuggested.push({
+        modality: mod,
+        reason: "First-line treatment for acute injury with swelling. Controls inflammation and reduces pain.",
+      });
+    }
+
+    // Rehab for physio chronic
+    if (isPhysio && mod === "Rehabilitation Exercises" && isChronic) {
+      topSuggested.push({
+        modality: mod,
+        reason: "Long-term recovery depends on progressive loading. Most important modality for chronic conditions.",
+      });
+    }
+
+    if (topSuggested.length >= 3) break;
+  }
+
+  // If we have fewer than 2, add first treatment as a suggestion
+  if (topSuggested.length === 0 && treatments.length > 0) {
+    topSuggested.push({
+      modality: treatments[0].modality,
+      reason: "Primary recommended treatment based on your clinical input.",
+    });
+  }
+
+  return { name: protocolName, treatments, topSuggested };
 }
