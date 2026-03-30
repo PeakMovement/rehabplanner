@@ -34,6 +34,31 @@ async function main() {
   });
   console.log(`Created clinician user: ${clinician.email}`);
 
+  // Staff members with 4-digit PIN codes
+  const staffMembers = [
+    { name: "Justin", email: "justin@rehab.com", pin: "2847", profession: "physiotherapist" },
+    { name: "Luyolo", email: "luyolo@rehab.com", pin: "5193", profession: "physiotherapist" },
+    { name: "Tasneem", email: "tasneem@rehab.com", pin: "7362", profession: "physiotherapist" },
+    { name: "Zoe", email: "zoe@rehab.com", pin: "4081", profession: "biokineticist" },
+    { name: "Admin", email: "admin@rehab.com", pin: "9999", profession: "physiotherapist" },
+  ];
+
+  for (const staff of staffMembers) {
+    const hashedPin = await bcrypt.hash(staff.pin, 10);
+    const user = await prisma.user.upsert({
+      where: { email: staff.email },
+      update: { passwordHash: hashedPin, profession: staff.profession },
+      create: {
+        name: staff.name,
+        email: staff.email,
+        passwordHash: hashedPin,
+        role: staff.email === "admin@rehab.com" ? "admin" : "clinician",
+        profession: staff.profession,
+      },
+    });
+    console.log(`Created staff: ${user.name} (${user.email}) — PIN: ${staff.pin}`);
+  }
+
   // Sample exercises
   const exercises = [
     // Shoulder exercises
