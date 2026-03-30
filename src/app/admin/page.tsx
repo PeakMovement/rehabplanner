@@ -1,12 +1,12 @@
 import { requireAdmin } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
-import { Users, ClipboardList } from "lucide-react";
+import { Users } from "lucide-react";
 import Link from "next/link";
 
 export default async function AdminPage() {
   const session = await requireAdmin();
 
-  const [users, totalUsers, totalPrescriptions] =
+  const [users, totalUsers] =
     await Promise.all([
       prisma.user.findMany({
         orderBy: { createdAt: "desc" },
@@ -14,22 +14,15 @@ export default async function AdminPage() {
           _count: {
             select: {
               patients: true,
-              prescriptions: true,
             },
           },
         },
       }),
       prisma.user.count(),
-      prisma.prescription.count(),
     ]);
 
   const systemStats = [
     { label: "Total Users", value: totalUsers, icon: Users },
-    {
-      label: "Total Prescriptions",
-      value: totalPrescriptions,
-      icon: ClipboardList,
-    },
   ];
 
   return (
@@ -47,7 +40,7 @@ export default async function AdminPage() {
         </div>
 
         {/* System Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-1 gap-6 mb-8">
           {systemStats.map((stat) => {
             const Icon = stat.icon;
             return (
@@ -97,9 +90,6 @@ export default async function AdminPage() {
                     Patients
                   </th>
                   <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Prescriptions
-                  </th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Joined
                   </th>
                   <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -129,9 +119,6 @@ export default async function AdminPage() {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {user._count.patients}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {user._count.prescriptions}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {new Date(user.createdAt).toLocaleDateString()}

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Edit, Plus, ClipboardList } from "lucide-react";
+import { ArrowLeft, Edit } from "lucide-react";
 
 interface Patient {
   id: string;
@@ -15,13 +15,6 @@ interface Patient {
   diagnosis: string | null;
   notes: string | null;
   createdAt: string;
-  prescriptions: {
-    id: string;
-    name: string;
-    status: string;
-    createdAt: string;
-    _count: { exercises: number };
-  }[];
 }
 
 export default function PatientDetailPage() {
@@ -66,7 +59,7 @@ export default function PatientDetailPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <h2 className="text-sm font-medium text-gray-500 mb-3">Contact Info</h2>
           <div className="space-y-2 text-sm">
@@ -83,55 +76,6 @@ export default function PatientDetailPage() {
           </div>
         </div>
       </div>
-
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">Prescriptions</h2>
-        <Link
-          href={`/prescriptions/new?patientId=${patient.id}`}
-          className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-blue-700"
-        >
-          <Plus className="w-4 h-4" />
-          New Prescription
-        </Link>
-      </div>
-
-      {patient.prescriptions.length === 0 ? (
-        <div className="text-center py-8 bg-white rounded-lg border border-gray-200">
-          <ClipboardList className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm">No prescriptions yet</p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Name</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Exercises</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {patient.prescriptions.map((rx) => (
-                <tr key={rx.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <Link href={`/prescriptions/${rx.id}`} className="text-sm font-medium text-blue-600 hover:underline">
-                      {rx.name}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${rx.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
-                      {rx.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{rx._count.exercises}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{new Date(rx.createdAt).toLocaleDateString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
     </div>
   );
 }

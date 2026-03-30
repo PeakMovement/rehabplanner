@@ -28,11 +28,6 @@ export async function GET(
 
   const patient = await prisma.patient.findUnique({
     where: { id },
-    include: {
-      prescriptions: {
-        orderBy: { createdAt: "desc" },
-      },
-    },
   });
 
   if (!patient) {
