@@ -37,7 +37,7 @@ async function main() {
   // Staff members with 4-digit PIN codes
   const staffMembers = [
     { name: "Justin", email: "justin@rehab.com", pin: "2847", profession: "physiotherapist" },
-    { name: "Luyolo", email: "luyolo@rehab.com", pin: "5193", profession: "physiotherapist" },
+    { name: "Luyolo", email: "luyolo@rehab.com", pin: "5193", profession: "biokineticist" },
     { name: "Tasneem", email: "tasneem@rehab.com", pin: "7362", profession: "physiotherapist" },
     { name: "Zoe", email: "zoe@rehab.com", pin: "4081", profession: "biokineticist" },
     { name: "Admin", email: "admin@rehab.com", pin: "9999", profession: "physiotherapist" },

@@ -3,7 +3,6 @@
 import { useState, useRef } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 
 const STAFF = [
   { name: "Justin", email: "justin@rehab.com", initials: "J" },
@@ -14,12 +13,8 @@ const STAFF = [
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
-  // PIN login state
   const [selectedStaff, setSelectedStaff] = useState<typeof STAFF[0] | null>(null);
   const [pin, setPin] = useState(["", "", "", ""]);
   const pinRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -41,7 +36,6 @@ export default function LoginPage() {
       pinRefs.current[index + 1]?.focus();
     }
 
-    // Auto-submit when all 4 digits entered
     if (value && index === 3) {
       const fullPin = [...newPin.slice(0, 3), value.slice(-1)].join("");
       if (fullPin.length === 4 && selectedStaff) {
@@ -68,7 +62,7 @@ export default function LoginPage() {
       if (result?.error) {
         setError("Invalid PIN");
         setPin(["", "", "", ""]);
-        pinRefs.current[0]?.focus();
+        setTimeout(() => pinRefs.current[0]?.focus(), 50);
       } else {
         router.push("/dashboard");
       }
@@ -79,36 +73,12 @@ export default function LoginPage() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
-
-    try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        setError("Invalid email or password");
-      } else {
-        router.push("/dashboard");
-      }
-    } catch {
-      setError("An unexpected error occurred");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
-    <div className="w-full max-w-md">
+    <div className="w-full max-w-sm">
       <div className="bg-white rounded-lg shadow-md p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">RehabPrescriber</h1>
-          <p className="text-gray-500 mt-2">Sign in to your account</p>
+          <p className="text-gray-500 mt-2">Select your profile to sign in</p>
         </div>
 
         {error && (
@@ -117,140 +87,73 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Staff Quick Login */}
-        <div className="mb-6">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
-            Quick login
-          </p>
-          <div className="grid grid-cols-4 gap-2">
+        {!selectedStaff ? (
+          <div className="grid grid-cols-2 gap-3">
             {STAFF.map((s) => (
               <button
                 key={s.email}
                 onClick={() => selectStaff(s)}
-                className={`flex flex-col items-center gap-1 py-3 rounded-lg border-2 transition-colors ${
-                  selectedStaff?.email === s.email
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:bg-gray-50"
-                }`}
+                className="flex flex-col items-center gap-2 py-5 rounded-xl border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
               >
-                <span
-                  className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold ${
-                    selectedStaff?.email === s.email
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-200 text-gray-700"
-                  }`}
-                >
+                <span className="flex items-center justify-center w-14 h-14 rounded-full bg-gray-200 text-gray-700 text-lg font-bold">
                   {s.initials}
                 </span>
-                <span className="text-xs font-medium text-gray-700">
+                <span className="text-sm font-semibold text-gray-800">
                   {s.name}
                 </span>
               </button>
             ))}
           </div>
-
-          {/* PIN input */}
-          {selectedStaff && (
-            <div className="mt-4">
-              <p className="text-sm text-gray-600 text-center mb-3">
-                Enter PIN for <span className="font-semibold">{selectedStaff.name}</span>
+        ) : (
+          <div>
+            <div className="flex flex-col items-center mb-6">
+              <span className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 text-white text-xl font-bold mb-2">
+                {selectedStaff.initials}
+              </span>
+              <p className="text-lg font-semibold text-gray-900">
+                {selectedStaff.name}
               </p>
-              <div className="flex justify-center gap-3">
-                {pin.map((digit, i) => (
-                  <input
-                    key={i}
-                    ref={(el) => { pinRefs.current[i] = el; }}
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handlePinChange(i, e.target.value)}
-                    onKeyDown={(e) => handlePinKeyDown(i, e)}
-                    disabled={isLoading}
-                    className="w-12 h-14 text-center text-xl font-bold border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
-                  />
-                ))}
-              </div>
-              <button
-                onClick={() => {
-                  setSelectedStaff(null);
-                  setPin(["", "", "", ""]);
-                  setError("");
-                }}
-                className="block mx-auto mt-3 text-xs text-gray-500 hover:text-gray-700"
-              >
-                Cancel
-              </button>
             </div>
-          )}
-        </div>
 
-        <div className="relative mb-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-200" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-2 text-gray-400">
-              or use email
-            </span>
-          </div>
-        </div>
+            <p className="text-sm text-gray-500 text-center mb-4">
+              Enter your 4-digit PIN
+            </p>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-1"
+            <div className="flex justify-center gap-3 mb-6">
+              {pin.map((digit, i) => (
+                <input
+                  key={i}
+                  ref={(el) => { pinRefs.current[i] = el; }}
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handlePinChange(i, e.target.value)}
+                  onKeyDown={(e) => handlePinKeyDown(i, e)}
+                  disabled={isLoading}
+                  className="w-14 h-16 text-center text-2xl font-bold border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+                />
+              ))}
+            </div>
+
+            {isLoading && (
+              <p className="text-sm text-gray-500 text-center mb-4">
+                Signing in...
+              </p>
+            )}
+
+            <button
+              onClick={() => {
+                setSelectedStaff(null);
+                setPin(["", "", "", ""]);
+                setError("");
+              }}
+              className="block mx-auto text-sm text-gray-500 hover:text-gray-700 transition-colors"
             >
-              Email address
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="you@example.com"
-            />
+              Back to profiles
+            </button>
           </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter your password"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isLoading ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-gray-500">
-          Don&apos;t have an account?{" "}
-          <Link
-            href="/register"
-            className="font-medium text-blue-600 hover:text-blue-500"
-          >
-            Create one
-          </Link>
-        </p>
+        )}
       </div>
     </div>
   );
